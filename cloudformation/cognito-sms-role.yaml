@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'IAM Role for Cognito SMS (standalone)'
+
+Parameters:
+  RoleName:
+    Type: String
+    Default: 'homeorder-user-pool-sms-role'
+    Description: 'Name for the Cognito SMS IAM Role'
+
+Resources:
+  CognitoSMSRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Ref RoleName
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cognito-idp.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonCognitoIdpSmsRole
+
+Outputs:
+  CognitoSMSRoleArn:
+    Description: 'ARN of the Cognito SMS IAM Role'
+    Value: !GetAtt CognitoSMSRole.Arn 

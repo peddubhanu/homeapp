@@ -5,6 +5,10 @@ let menuItems = [];
 let cart = [];
 let currentCategory = 'all';
 
+// Authentication state
+let isUserAuthenticated = false;
+let currentUser = null;
+
 // DOM Elements
 const menuGrid = document.getElementById('menuGrid');
 const categoryTabs = document.querySelectorAll('.category-tab');
@@ -13,13 +17,221 @@ const cartOverlay = document.getElementById('cartOverlay');
 const cartItems = document.getElementById('cartItems');
 const cartTotal = document.getElementById('cartTotal');
 const cartCount = document.querySelector('.cart-count');
+const navAuth = document.getElementById('navAuth');
 
 // Initialize the page
 document.addEventListener('DOMContentLoaded', function() {
+    checkAuthentication();
     loadMenuItems();
     displayMenuItems();
     setupEventListeners();
 });
+
+// Check authentication status
+function checkAuthentication() {
+    // Check if authUtils is available (from auth-script.js)
+    if (typeof window.authUtils !== 'undefined') {
+        isUserAuthenticated = window.authUtils.isAuthenticated();
+        currentUser = window.authUtils.getCurrentUser();
+    } else {
+        // Fallback to localStorage check
+        const userSession = localStorage.getItem('userSession');
+        const isAuth = localStorage.getItem('isAuthenticated');
+        isUserAuthenticated = !!(userSession && isAuth);
+        
+        if (isUserAuthenticated) {
+            try {
+                currentUser = JSON.parse(userSession);
+            } catch (error) {
+                console.error('Error parsing user session:', error);
+                isUserAuthenticated = false;
+                currentUser = null;
+            }
+        }
+    }
+    
+    updateAuthUI();
+}
+
+// Update authentication UI
+function updateAuthUI() {
+    if (isUserAuthenticated && currentUser) {
+        // Show user profile
+        const phoneNumber = currentUser.phoneNumber || 'Unknown';
+        const displayPhone = formatPhoneDisplay(phoneNumber);
+        const userInitial = displayPhone.charAt(0).toUpperCase();
+        
+        navAuth.innerHTML = `
+            <div class="user-profile" onclick="showUserMenu()">
+                <div class="user-avatar">${userInitial}</div>
+                <div class="user-info">
+                    <div class="user-name">User</div>
+                    <div class="user-phone">${displayPhone}</div>
+                </div>
+            </div>
+        `;
+    } else {
+        // Show login button
+        navAuth.innerHTML = `
+            <button class="auth-btn" onclick="goToLogin()">
+                <i class="fas fa-sign-in-alt"></i>
+                Login
+            </button>
+        `;
+    }
+}
+
+// Format phone number for display
+function formatPhoneDisplay(phoneNumber) {
+    // Remove country code and format
+    const number = phoneNumber.replace(/^\+\d{1,3}/, '');
+    
+    if (number.length === 10) {
+        return number.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+    }
+    
+    return number;
+}
+
+// Show user menu
+function showUserMenu() {
+    const userMenu = document.createElement('div');
+    userMenu.className = 'user-menu';
+    userMenu.style.cssText = `
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        padding: 1rem;
+        min-width: 200px;
+        z-index: 1000;
+        margin-top: 0.5rem;
+    `;
+    
+    userMenu.innerHTML = `
+        <div class="user-menu-header">
+            <div class="user-avatar" style="width: 40px; height: 40px; font-size: 1.2rem;">
+                ${formatPhoneDisplay(currentUser.phoneNumber).charAt(0).toUpperCase()}
+            </div>
+            <div class="user-menu-info">
+                <div class="user-name">User</div>
+                <div class="user-phone">${formatPhoneDisplay(currentUser.phoneNumber)}</div>
+            </div>
+        </div>
+        <div class="user-menu-actions">
+            <button class="menu-btn" onclick="viewOrders()">
+                <i class="fas fa-list"></i>
+                My Orders
+            </button>
+            <button class="menu-btn" onclick="viewProfile()">
+                <i class="fas fa-user"></i>
+                Profile
+            </button>
+            <button class="menu-btn logout-btn" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                Logout
+            </button>
+        </div>
+    `;
+    
+    // Add styles for menu elements
+    const menuStyles = `
+        .user-menu-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e9ecef;
+            margin-bottom: 1rem;
+        }
+        
+        .user-menu-info {
+            flex: 1;
+        }
+        
+        .user-menu-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .menu-btn {
+            background: none;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background 0.3s ease;
+            text-align: left;
+            width: 100%;
+        }
+        
+        .menu-btn:hover {
+            background: #f8f9fa;
+        }
+        
+        .menu-btn.logout-btn {
+            color: #dc3545;
+        }
+        
+        .menu-btn.logout-btn:hover {
+            background: #f8d7da;
+        }
+    `;
+    
+    // Inject styles if not already present
+    if (!document.getElementById('user-menu-styles')) {
+        const styleSheet = document.createElement('style');
+        styleSheet.id = 'user-menu-styles';
+        styleSheet.textContent = menuStyles;
+        document.head.appendChild(styleSheet);
+    }
+    
+    // Position the menu
+    const userProfile = navAuth.querySelector('.user-profile');
+    userProfile.style.position = 'relative';
+    userProfile.appendChild(userMenu);
+    
+    // Close menu when clicking outside
+    document.addEventListener('click', function closeMenu(e) {
+        if (!userProfile.contains(e.target)) {
+            userMenu.remove();
+            document.removeEventListener('click', closeMenu);
+        }
+    });
+}
+
+// Navigation functions
+function goToLogin() {
+    window.location.href = 'auth.html';
+}
+
+function logout() {
+    if (typeof window.authUtils !== 'undefined') {
+        window.authUtils.logout();
+    } else {
+        // Fallback logout
+        localStorage.removeItem('userSession');
+        localStorage.removeItem('isAuthenticated');
+        localStorage.removeItem('authTimestamp');
+        window.location.reload();
+    }
+}
+
+function viewOrders() {
+    // TODO: Implement order history view
+    showNotification('Order history feature coming soon!', 'info');
+}
+
+function viewProfile() {
+    // TODO: Implement profile view
+    showNotification('Profile feature coming soon!', 'info');
+}
 
 // Load menu items from localStorage or use default
 function loadMenuItems() {
@@ -273,16 +485,25 @@ function checkout() {
         return;
     }
     
+    // Check if user is authenticated
+    if (!isUserAuthenticated) {
+        showNotification('Please login to place an order', 'error');
+        goToLogin();
+        return;
+    }
+    
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     
-    // Create order object
+    // Create order object with user information
     const order = {
         id: Date.now(),
-        customer: 'Customer', // In a real app, this would be the logged-in user
+        customer: currentUser.phoneNumber,
+        customerName: 'User',
         items: cart.map(item => item.name),
         total: total,
         status: 'pending',
-        date: new Date().toISOString().split('T')[0]
+        date: new Date().toISOString().split('T')[0],
+        userId: currentUser.phoneNumber
     };
     
     // Save order to localStorage (for admin to see)
@@ -290,7 +511,7 @@ function checkout() {
     existingOrders.push(order);
     localStorage.setItem('adminOrders', JSON.stringify(existingOrders));
     
-    showNotification(`Order placed! Total: $${total.toFixed(2)}`, 'success');
+    showNotification(`Order placed successfully! Total: $${total.toFixed(2)}`, 'success');
     
     // Clear cart
     cart = [];
@@ -433,5 +654,10 @@ window.addEventListener('storage', function(e) {
         if (currentCategory !== 'all') {
             filterMenu(currentCategory);
         }
+    }
+    
+    // Check authentication changes
+    if (e.key === 'userSession' || e.key === 'isAuthenticated') {
+        checkAuthentication();
     }
 }); 

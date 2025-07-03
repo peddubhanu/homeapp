@@ -1,0 +1,50 @@
+﻿[
+  {
+    "ParameterKey": "UserPoolName",
+    "ParameterValue": "homeorder-user-pool"
+  },
+  {
+    "ParameterKey": "AppClientName",
+    "ParameterValue": "homeorder-client"
+  },
+  {
+    "ParameterKey": "DomainName",
+    "ParameterValue": "homeorder-auth"
+  },
+  {
+    "ParameterKey": "AllowedOAuthFlows",
+    "ParameterValue": "code"
+  },
+  {
+    "ParameterKey": "AllowedOAuthScopes",
+    "ParameterValue": "phone,email,openid,profile"
+  },
+  {
+    "ParameterKey": "CallbackURLs",
+    "ParameterValue": "https://howto-aws.com/auth.html,http://howto-aws.com/auth.html"
+  },
+  {
+    "ParameterKey": "LogoutURLs",
+    "ParameterValue": "https://howto-aws.com/,http://howto-aws.com/"
+  },
+  {
+    "ParameterKey": "SMSRoleArn",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "MFAConfiguration",
+    "ParameterValue": "ON"
+  },
+  {
+    "ParameterKey": "GoogleClientId",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "GoogleClientSecret",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "AllowedOAuthFlowsUserPoolClient",
+    "ParameterValue": "true"
+  }
+]

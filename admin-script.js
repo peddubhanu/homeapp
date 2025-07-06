@@ -13,6 +13,7 @@ const TABLES = {
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Admin panel initializing...');
     initializeAdmin();
     loadDashboard();
     loadMenuItems();
@@ -21,7 +22,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Initialize AWS SDK and admin panel
 function initializeAdmin() {
+    console.log('Initializing AWS SDK...');
+    
     try {
+        // Check if AWS SDK is loaded
+        if (typeof AWS === 'undefined') {
+            console.error('AWS SDK not loaded!');
+            showNotification('AWS SDK not loaded. Using localStorage fallback.', 'error');
+            loadFromLocalStorage();
+            return;
+        }
+        
         // Initialize AWS SDK with default credential provider chain
         // This will automatically use AWS CLI credentials, IAM roles, or environment variables
         AWS.config.update({
@@ -36,8 +47,9 @@ function initializeAdmin() {
         // Test the connection
         testDynamoDBConnection();
     } catch (error) {
-        console.warn('AWS SDK initialization failed:', error);
+        console.error('AWS SDK initialization failed:', error);
         console.warn('Using localStorage fallback for development');
+        showNotification('AWS SDK initialization failed. Using localStorage fallback.', 'error');
         // Fallback to localStorage for development
         loadFromLocalStorage();
     }
@@ -46,6 +58,7 @@ function initializeAdmin() {
 // Test DynamoDB connection
 async function testDynamoDBConnection() {
     try {
+        console.log('Testing DynamoDB connection...');
         const params = {
             TableName: TABLES.MENU_ITEMS,
             Limit: 1
@@ -53,9 +66,11 @@ async function testDynamoDBConnection() {
         
         await dynamodb.scan(params).promise();
         console.log('✅ DynamoDB connection successful');
+        showNotification('Connected to DynamoDB successfully!', 'success');
     } catch (error) {
         console.warn('DynamoDB connection failed:', error);
         console.warn('Using localStorage fallback');
+        showNotification('DynamoDB connection failed. Using localStorage fallback.', 'warning');
         isAWSConfigured = false;
         loadFromLocalStorage();
     }
@@ -63,16 +78,89 @@ async function testDynamoDBConnection() {
 
 // Load data from localStorage (fallback)
 function loadFromLocalStorage() {
-    const menuItems = JSON.parse(localStorage.getItem('menuItems') || '[]');
-    const orders = JSON.parse(localStorage.getItem('orders') || '[]');
+    console.log('Loading data from localStorage...');
+    let menuItems = JSON.parse(localStorage.getItem('menuItems') || '[]');
+    let orders = JSON.parse(localStorage.getItem('orders') || '[]');
+    
+    // Initialize with sample data if empty
+    if (menuItems.length === 0) {
+        menuItems = [
+            {
+                id: 'sample1',
+                name: 'Margherita Pizza',
+                description: 'Classic tomato sauce with mozzarella cheese and fresh basil',
+                price: 14.99,
+                category: 'pizza',
+                image: 'https://images.unsplash.com/photo-1604382355076-af4b0eb60143?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
+                isAvailable: 'true',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            },
+            {
+                id: 'sample2',
+                name: 'Classic Burger',
+                description: 'Juicy beef patty with lettuce, tomato, and special sauce',
+                price: 12.99,
+                category: 'burger',
+                image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
+                isAvailable: 'true',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            },
+            {
+                id: 'sample3',
+                name: 'Caesar Salad',
+                description: 'Fresh romaine lettuce with Caesar dressing and croutons',
+                price: 9.99,
+                category: 'salad',
+                image: 'https://images.unsplash.com/photo-1546793665-c74683f339c1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
+                isAvailable: 'true',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            }
+        ];
+        localStorage.setItem('menuItems', JSON.stringify(menuItems));
+    }
+    
+    if (orders.length === 0) {
+        orders = [
+            {
+                orderId: 'order1',
+                customerName: 'John Doe',
+                customerPhone: '+1234567890',
+                customerAddress: '123 Main St, City, State',
+                items: ['Margherita Pizza', 'Classic Burger'],
+                totalAmount: 27.98,
+                orderStatus: 'pending',
+                orderDate: new Date().toISOString(),
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            },
+            {
+                orderId: 'order2',
+                customerName: 'Jane Smith',
+                customerPhone: '+1987654321',
+                customerAddress: '456 Oak Ave, City, State',
+                items: ['Caesar Salad'],
+                totalAmount: 9.99,
+                orderStatus: 'confirmed',
+                orderDate: new Date(Date.now() - 86400000).toISOString(), // Yesterday
+                createdAt: new Date(Date.now() - 86400000).toISOString(),
+                updatedAt: new Date().toISOString()
+            }
+        ];
+        localStorage.setItem('orders', JSON.stringify(orders));
+    }
     
     displayMenuItems(menuItems);
     displayOrders(orders);
     updateDashboardStats(menuItems, orders);
+    showNotification('Using localStorage for data storage.', 'info');
 }
 
 // Dashboard Functions
 function loadDashboard() {
+    console.log('Loading dashboard...');
     if (isAWSConfigured) {
         Promise.all([
             getAllMenuItems(),
@@ -83,6 +171,7 @@ function loadDashboard() {
             displayPopularItems(menuItems);
         }).catch(error => {
             console.error('Error loading dashboard:', error);
+            showNotification('Error loading dashboard data.', 'error');
             loadFromLocalStorage();
         });
     } else {
@@ -91,6 +180,7 @@ function loadDashboard() {
 }
 
 function updateDashboardStats(menuItems, orders) {
+    console.log('Updating dashboard stats...');
     document.getElementById('totalItems').textContent = menuItems.length;
     document.getElementById('totalOrders').textContent = orders.length;
     
@@ -147,12 +237,14 @@ function displayPopularItems(menuItems) {
 
 // Menu Items Functions
 async function loadMenuItems() {
+    console.log('Loading menu items...');
     if (isAWSConfigured) {
         try {
             const menuItems = await getAllMenuItems();
             displayMenuItems(menuItems);
         } catch (error) {
             console.error('Error loading menu items:', error);
+            showNotification('Error loading menu items.', 'error');
             loadFromLocalStorage();
         }
     } else {
@@ -179,6 +271,7 @@ async function getAllMenuItems() {
 }
 
 function displayMenuItems(menuItems) {
+    console.log('Displaying menu items:', menuItems.length);
     const tableBody = document.getElementById('menuTableBody');
     
     if (menuItems.length === 0) {
@@ -216,6 +309,7 @@ function displayMenuItems(menuItems) {
 }
 
 async function addMenuItem(itemData) {
+    console.log('Adding menu item:', itemData);
     const item = {
         id: generateId(),
         name: itemData.name,
@@ -339,12 +433,14 @@ async function deleteMenuItem(itemId) {
 
 // Orders Functions
 async function loadOrders() {
+    console.log('Loading orders...');
     if (isAWSConfigured) {
         try {
             const orders = await getAllOrders();
             displayOrders(orders);
         } catch (error) {
             console.error('Error loading orders:', error);
+            showNotification('Error loading orders.', 'error');
             loadFromLocalStorage();
         }
     } else {
@@ -371,6 +467,7 @@ async function getAllOrders() {
 }
 
 function displayOrders(orders) {
+    console.log('Displaying orders:', orders.length);
     const ordersContainer = document.getElementById('ordersTableBody');
     
     if (orders.length === 0) {
@@ -445,6 +542,7 @@ function generateId() {
 }
 
 function showSection(sectionId) {
+    console.log('Showing section:', sectionId);
     // Hide all sections
     document.querySelectorAll('.admin-section').forEach(section => {
         section.classList.remove('active');
@@ -466,15 +564,45 @@ function showSection(sectionId) {
 }
 
 function showNotification(message, type = 'info') {
+    console.log('Notification:', type, message);
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.textContent = message;
+    
+    // Add some basic styling for notifications
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        color: white;
+        z-index: 10000;
+        max-width: 300px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    `;
+    
+    // Set colors based on type
+    switch(type) {
+        case 'success':
+            notification.style.background = '#28a745';
+            break;
+        case 'error':
+            notification.style.background = '#dc3545';
+            break;
+        case 'warning':
+            notification.style.background = '#ffc107';
+            notification.style.color = '#212529';
+            break;
+        default:
+            notification.style.background = '#17a2b8';
+    }
     
     document.body.appendChild(notification);
     
     setTimeout(() => {
         notification.remove();
-    }, 3000);
+    }, 5000);
 }
 
 function goToMainSite() {
@@ -491,6 +619,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (addItemForm) {
         addItemForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            console.log('Form submitted');
             
             const formData = new FormData(addItemForm);
             const itemData = {

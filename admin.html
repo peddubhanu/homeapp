@@ -385,6 +385,26 @@
     <!-- Modal Overlay -->
     <div class="modal-overlay" id="modalOverlay" onclick="closeAllModals()"></div>
 
+    <!-- Debug: Force Unlock Button -->
+    <button id="forceUnlockBtn" style="position:fixed;bottom:20px;right:20px;z-index:99999;padding:10px 20px;background:#28a745;color:#fff;border:none;border-radius:5px;box-shadow:0 2px 8px rgba(0,0,0,0.2);cursor:pointer;">
+        Force Unlock
+    </button>
+    <script>
+        document.getElementById('forceUnlockBtn').onclick = function() {
+            // Remove overlays and modals
+            document.querySelectorAll('.modal, .overlay, .modal-backdrop').forEach(el => el.remove());
+            document.body.style.overflow = '';
+            document.body.style.pointerEvents = '';
+            // Remove any darkening or blur
+            document.body.style.filter = '';
+            // Remove any class that might disable interaction
+            document.body.classList.remove('modal-open', 'overlay', 'disabled');
+            alert('Force unlock applied!');
+        };
+        // Also auto-run on page load
+        setTimeout(() => document.getElementById('forceUnlockBtn').onclick(), 1000);
+    </script>
+
     <script src="admin-script.js"></script>
 </body>
 </html> 
